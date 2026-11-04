@@ -23,7 +23,7 @@ jobs:
       - name: Install minimal unit test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy opencv-python pytest cryptography
+          pip install numpy opencv-python pytest cryptography filelock
 
       - name: Run unit tests
         run: |

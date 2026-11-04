@@ -1,0 +1,92 @@
+# ==============================================================================
+# Git Ignore Configuration - Cheating Surveillance System
+# Prevents accidental commits of large assets, model weights, demo videos,
+# generated evidence logs, local virtual environments, secrets, and caches.
+# ==============================================================================
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+*.tmp
+*.bak
+*~
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment files, secrets, and credentials
+.env
+.env.*
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+*.pfx
+*.crt
+*.p12
+secrets.json
+credentials.json
+
+# Cryptographic keystores, Master Recovery Keys, and encryption assets
+keys/
+*.enc
+keystore.enc
+*recovery*.txt
+*master_recovery*
+*.mrk
+
+# Process-isolated runtime settings
+.ultralytics/
+.isolated_ultralytics/
+
+# Large model weights and checkpoints (~118.6 MB total)
+# Model files should be stored externally (e.g. Git LFS or external release assets)
+model/*.dat
+model/*.pt
+model/*.pth
+model/*.onnx
+*.dat
+*.pt
+*.pth
+*.onnx
+
+# Large video demo recordings (~12.6 MB total)
+Demo_vid/*.mp4
+Demo_vid/*.avi
+*.mp4
+*.avi
+*.mov
+
+# Generated logs, screenshots, evidence files, and retention stores
+log/*.png
+log/*.jpg
+log/*.jpeg
+log/*.log
+log/*.csv
+log/screen_gaze_calibration*.json
+log/evidence/
+log/encrypted/
+log/retention/
+*.log
+
+# Private backups and migration archives
+*backup*/
+*.backup
+
+# Private developer / maintenance reports
+GITHUB_PUBLIC_REPOSITORY_CLEANUP_REPORT.md
+
+# Operating system and editor metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

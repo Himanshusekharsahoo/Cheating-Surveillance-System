@@ -32,6 +32,8 @@ import eye_movement
 from vision_pipeline import VisionPipeline, FaceAnalysisResult
 from single_eye_fallback import GazeTrackingResult
 
+pytestmark = pytest.mark.unit
+
 
 # ===========================================================================
 # 1. Rotation Matrix Tests

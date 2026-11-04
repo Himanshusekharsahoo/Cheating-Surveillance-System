@@ -23,6 +23,8 @@ from screen_gaze import (
 from gaze_fusion import CombinedGazeResult, HeadPoseResult, EyeGazeResult
 from vision_pipeline import VisionPipeline, FaceAnalysisResult
 
+pytestmark = pytest.mark.unit
+
 
 # ===========================================================================
 # 1. ScreenCalibrationSample Validation Tests

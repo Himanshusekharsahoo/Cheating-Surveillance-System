@@ -28,6 +28,8 @@ from screen_gaze import (
 )
 from vision_pipeline import VisionPipeline, FaceAnalysisResult
 
+pytestmark = pytest.mark.unit
+
 
 class TestFullSystemIntegrationChain:
     """Verifies that the entire perception and calibration pipeline operates seamlessly as one system."""

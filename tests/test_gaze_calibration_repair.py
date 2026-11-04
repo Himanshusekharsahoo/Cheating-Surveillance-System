@@ -12,6 +12,8 @@ from eye_movement import (
 )
 from time_source import MockTimeSource
 
+pytestmark = pytest.mark.unit
+
 
 # ==============================================================================
 # Task 1: Pupil Edge Filtering Tests

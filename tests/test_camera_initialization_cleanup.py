@@ -18,12 +18,17 @@ Verifies:
 from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
+import config
 
 from main import run_surveillance, main
 from event_logger import EventLogger
-import config
 
 pytestmark = pytest.mark.unit
+
+
+@pytest.fixture(autouse=True)
+def isolate_model_validation(monkeypatch):
+    monkeypatch.setattr(config, "validate_config", lambda: None)
 
 
 def _make_dummy_frame():

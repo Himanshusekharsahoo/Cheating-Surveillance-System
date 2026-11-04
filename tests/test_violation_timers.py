@@ -202,7 +202,7 @@ def test_screenshot_write_failure_handled_safely(tmp_path):
         assert "3.00" in content
 
 
-def test_camera_cleanup_after_simulated_processing_exception(tmp_path):
+def test_camera_cleanup_after_simulated_processing_exception():
     """Verify that camera handle is released in finally block when an exception occurs in frame loop."""
     from unittest.mock import MagicMock, patch
     from main import run_surveillance
@@ -213,22 +213,11 @@ def test_camera_cleanup_after_simulated_processing_exception(tmp_path):
     mock_cap.read.side_effect = RuntimeError("Simulated camera frame read error")
 
     # Run in headless mode so it doesn't open GUI
-    fake_pred = tmp_path / "fake.dat"
-    fake_yolo = tmp_path / "fake.pt"
-    fake_pred.write_bytes(b"dummy")
-    fake_yolo.write_bytes(b"dummy")
-
-    import hashlib
-    import config
-    config.register_test_model("fake.dat", hashlib.sha256(b"dummy").hexdigest(), 5, "dlib_shape_predictor")
-    config.register_test_model("fake.pt", hashlib.sha256(b"dummy").hexdigest(), 5, "yolo")
-    try:
-        with pytest.raises(RuntimeError, match="Simulated camera frame read error"):
-            with patch("config.SHAPE_PREDICTOR_PATH", fake_pred), \
-                 patch("config.YOLO_MODEL_PATH", fake_yolo):
-                run_surveillance(cap=mock_cap, display=False)
-    finally:
-        config.reset_model_registry()
+    with pytest.raises(RuntimeError, match="Simulated camera frame read error"):
+        with patch("config.validate_config"), \
+             patch("config.SHAPE_PREDICTOR_PATH"), \
+             patch("config.YOLO_MODEL_PATH"):
+            run_surveillance(cap=mock_cap, display=False)
 
     # Assert camera release was called in finally block
     assert mock_cap.release.called is True

@@ -20,11 +20,33 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install minimal unit test dependencies
+      - name: Install unit-test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy opencv-python pytest cryptography filelock
+          python -m pip install numpy opencv-python pytest cryptography filelock
 
       - name: Run unit tests
+        run: python -m pytest -m "unit and not integration"
+
+  integration-tests:
+    name: Runtime Integration Tests (Windows / Python 3.13)
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install integration-test dependencies
         run: |
-          python -m pytest -m unit
+          python -m pip install --upgrade pip
+          python -m pip install numpy opencv-python pytest cryptography filelock
+          python -m pip install dlib-bin==20.0.1.post1 torch==2.14.0 torchvision==0.29.0 ultralytics==8.4.182
+
+      - name: Run integration tests
+        # Model weights and demo media are intentionally excluded from Git; asset-backed tests report explicit skips until authorized assets are supplied.
+        run: python -m pytest -m integration

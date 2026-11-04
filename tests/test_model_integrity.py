@@ -16,6 +16,7 @@ Covers:
 
 import hashlib
 import os
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import pytest
@@ -173,7 +174,9 @@ def test_yolo_loading_prevented_on_failed_verification(tmp_path):
     tampered_file = _make_dummy_model(tmp_path, "weaponized.pt", b"PAYLOAD")
     register_test_model("weaponized.pt", "f" * 64, 7, "yolo")
 
-    with patch("ultralytics.YOLO") as mock_yolo:
+    mock_yolo = MagicMock()
+    with patch("mobile_detection.enforce_offline_isolation"), \
+         patch.dict(sys.modules, {"ultralytics": MagicMock(YOLO=mock_yolo)}):
         with pytest.raises(ModelIntegrityError):
             mobile_detection.get_model(tampered_file)
 
@@ -187,7 +190,8 @@ def test_dlib_loading_prevented_on_failed_verification(tmp_path):
     tampered_file = _make_dummy_model(tmp_path, "tampered_landmarks.dat", b"CORRUPT")
     register_test_model("tampered_landmarks.dat", "e" * 64, 7, "dlib_shape_predictor")
 
-    with patch("dlib.shape_predictor") as mock_dlib:
+    mock_dlib = MagicMock()
+    with patch.dict(sys.modules, {"dlib": MagicMock(shape_predictor=mock_dlib)}):
         with pytest.raises(ModelIntegrityError):
             eye_movement.get_shape_predictor(tampered_file)
 

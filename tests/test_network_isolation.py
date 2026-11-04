@@ -19,6 +19,7 @@ Covers the 14 required regression and process-isolation areas:
 """
 
 import os
+import hashlib
 import socket
 import subprocess
 import urllib.request
@@ -60,6 +61,7 @@ def clean_environment_and_singletons(monkeypatch):
 # ---------------------------------------------------------------------------
 # Test 1: Process-Local Offline Settings Applied Successfully
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_process_local_offline_settings_applied():
     """Verify process-local offline settings and globals are active in memory."""
     from ultralytics import SETTINGS
@@ -81,6 +83,7 @@ def test_process_local_offline_settings_applied():
 # ---------------------------------------------------------------------------
 # Test 2: Applying Offline Settings Does Not Persistently Write Ultralytics Settings
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_applying_offline_settings_does_not_persistently_write(monkeypatch):
     """Verify that enforce_offline_isolation never triggers JSONDict._save()."""
     from ultralytics import SETTINGS
@@ -96,6 +99,7 @@ def test_applying_offline_settings_does_not_persistently_write(monkeypatch):
 # ---------------------------------------------------------------------------
 # Test 3: The Real User-Level settings.json Remains Untouched
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_real_user_settings_file_remains_untouched():
     """Verify that calling enforce_offline_isolation leaves the real settings.json untouched."""
     appdata = os.environ.get("APPDATA")
@@ -122,6 +126,7 @@ def test_real_user_settings_file_remains_untouched():
 # ---------------------------------------------------------------------------
 # Test 4: Existing Unrelated Ultralytics Settings Remain Unchanged
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_unrelated_ultralytics_settings_remain_unchanged():
     """Verify that process-local isolation preserves all other Ultralytics settings keys."""
     from ultralytics import SETTINGS
@@ -136,6 +141,7 @@ def test_unrelated_ultralytics_settings_remain_unchanged():
 # ---------------------------------------------------------------------------
 # Test 5: The Autouse Fixture Performs No Persistent Settings Writes
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_autouse_fixture_performs_no_persistent_settings_writes(monkeypatch):
     """Verify that conftest.py test_model_registry_fixture executes with zero settings writes."""
     import sys
@@ -214,6 +220,7 @@ def test_environment_variables_originally_set_regain_exact_original_values(monke
 # ---------------------------------------------------------------------------
 # Test 9: Telemetry Remains Disabled When Initial Sync Setting Is Enabled
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_telemetry_remains_disabled_when_initial_sync_enabled(monkeypatch):
     """Verify that enforce_offline_isolation overrides an initially-true sync setting in memory."""
     from ultralytics import SETTINGS
@@ -237,6 +244,7 @@ def test_telemetry_remains_disabled_when_initial_sync_enabled(monkeypatch):
 # ---------------------------------------------------------------------------
 # Test 10: Automatic Package Installation Remains Disabled
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_automatic_dependency_installation_prevented():
     """Verify that unsatisfied requirements do NOT invoke pip or uv subprocesses."""
     try:
@@ -254,6 +262,7 @@ def test_automatic_dependency_installation_prevented():
 # ---------------------------------------------------------------------------
 # Test 11: Import Order Cannot Accidentally Enable Telemetry
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_import_order_cannot_accidentally_enable_telemetry(monkeypatch):
     """Verify that even if modules were imported with online values, enforcement resets them."""
     from ultralytics import SETTINGS
@@ -285,6 +294,7 @@ def test_import_order_cannot_accidentally_enable_telemetry(monkeypatch):
 # ---------------------------------------------------------------------------
 # Test 12: Local YOLO Model Loading Works Cleanly Offline
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_local_yolo_model_loading_works_offline(monkeypatch):
     """Verify that local YOLO model loads without network socket connections."""
     if not config.YOLO_MODEL_PATH.is_file():
@@ -313,6 +323,7 @@ def test_local_yolo_model_loading_works_offline(monkeypatch):
 # ---------------------------------------------------------------------------
 # Test 13: Model Integrity Checks Precede Deserialization
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_model_integrity_checks_precede_deserialization(tmp_path):
     """Verify that corrupt model raises ModelIntegrityError before any YOLO call."""
     corrupted_file = tmp_path / "best_yolov12.pt"
@@ -327,6 +338,7 @@ def test_model_integrity_checks_precede_deserialization(tmp_path):
 # ---------------------------------------------------------------------------
 # Test 14: Missing or Tampered Model Files Fail Closed
 # ---------------------------------------------------------------------------
+@pytest.mark.integration
 def test_missing_or_tampered_model_files_fail_closed(tmp_path):
     """Verify that both missing and tampered model files strictly fail closed."""
     # 1. Missing model file
@@ -354,6 +366,7 @@ def test_privacy_controls_initialized():
     assert os.environ.get("YOLO_VERBOSE") == "False"
 
 
+@pytest.mark.integration
 def test_automatic_update_behavior_disabled():
     """Verify that check_pip_update_available returns False without making HTTP requests."""
     try:
@@ -401,8 +414,17 @@ def test_inference_executes_offline_without_network_io(monkeypatch):
     assert len(network_probes) == 0
 
 
-def test_config_validate_enforces_offline_isolation():
+def test_config_validate_enforces_offline_isolation(tmp_path, monkeypatch):
     """Verify that config.validate_config() triggers enforce_offline_isolation()."""
+    fake_pred = tmp_path / "fake.dat"
+    fake_yolo = tmp_path / "fake.pt"
+    fake_pred.write_bytes(b"dummy")
+    fake_yolo.write_bytes(b"dummy")
+    monkeypatch.setattr(config, "SHAPE_PREDICTOR_PATH", fake_pred)
+    monkeypatch.setattr(config, "YOLO_MODEL_PATH", fake_yolo)
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path / "log")
+    register_test_model("fake.dat", hashlib.sha256(b"dummy").hexdigest(), 5, "dlib_shape_predictor")
+    register_test_model("fake.pt", hashlib.sha256(b"dummy").hexdigest(), 5, "yolo")
     with patch("config.enforce_offline_isolation") as mock_enforce:
         config.validate_config()
         assert mock_enforce.called is True

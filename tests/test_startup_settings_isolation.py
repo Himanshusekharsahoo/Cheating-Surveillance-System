@@ -102,6 +102,7 @@ def _run_isolated_startup(tmp_path, profile, settings_payload=None):
         ("incompatible", b'{"version": "999.0.0"}'),
     ],
 )
+@pytest.mark.integration
 def test_startup_does_not_create_or_modify_global_settings(tmp_path, label, payload):
     profile = tmp_path / f"profile-{label}"
     _run_isolated_startup(tmp_path, profile, payload)

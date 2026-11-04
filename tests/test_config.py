@@ -7,6 +7,7 @@ import config
 
 pytestmark = pytest.mark.unit
 
+@pytest.mark.integration
 def test_valid_config_validates_successfully(monkeypatch, tmp_path):
     """Verify that valid configuration validates successfully when model files exist and match integrity."""
     fake_predictor = tmp_path / "shape_predictor_68_face_landmarks.dat"

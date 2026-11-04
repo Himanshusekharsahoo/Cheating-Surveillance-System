@@ -109,6 +109,7 @@ def test_opencv_core_apis_functional():
     assert tvec.shape == (3, 1)
 
 
+@pytest.mark.integration
 def test_core_runtime_packages_importable():
     """Verify that all core runtime dependencies import cleanly."""
     import numpy
@@ -128,6 +129,7 @@ def test_core_runtime_packages_importable():
     assert pytest.__version__ is not None
 
 
+@pytest.mark.integration
 def test_ultralytics_runtime_version_and_offline_isolation():
     """Verify installed Ultralytics runtime complies with offline isolation controls."""
     configure_offline_environment()

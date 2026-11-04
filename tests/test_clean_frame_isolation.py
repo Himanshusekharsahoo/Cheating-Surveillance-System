@@ -145,6 +145,7 @@ def test_main_surveillance_yolo_receives_unannotated_pixels(tmp_path):
 
     with patch("config.SHAPE_PREDICTOR_PATH", dummy_pred), \
          patch("config.YOLO_MODEL_PATH", dummy_yolo), \
+         patch("config.enforce_offline_isolation"), \
          patch("main.process_frame_face") as mock_face, \
          patch("main.PhoneDetectionTracker") as MockTrackerClass:
 

@@ -22,8 +22,10 @@ import os
 import hashlib
 import socket
 import subprocess
+import sys
 import urllib.request
 from pathlib import Path
+from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
@@ -381,10 +383,32 @@ def test_automatic_update_behavior_disabled():
 
 def test_configuration_failures_not_silently_ignored():
     """Verify that enforce_offline_isolation raises RuntimeError if flags cannot be set."""
+    settings = type("Settings", (dict,), {})()
+    settings.file = str(network_isolation._ultralytics_config_dir / "settings.json")
+    ultralytics = ModuleType("ultralytics")
+    ultralytics.__path__ = []
+    ultralytics.SETTINGS = settings
+    utils = ModuleType("ultralytics.utils")
+    utils.__path__ = []
+    utils.USER_CONFIG_DIR = str(network_isolation._ultralytics_config_dir)
+    utils.ONLINE = True
+    utils.AUTOINSTALL = True
+    checks = ModuleType("ultralytics.utils.checks")
+    checks.ONLINE = True
+    checks.AUTOINSTALL = True
+    events_module = ModuleType("ultralytics.utils.events")
+    events_module.events = SimpleNamespace(enabled=True)
+    ultralytics.utils = utils
     with patch.dict(os.environ, {"YOLO_OFFLINE": "False", "YOLO_AUTOINSTALL": "True"}, clear=False):
         with patch("network_isolation.configure_offline_environment"):
-            with pytest.raises(RuntimeError, match="Failed to establish the isolated Ultralytics offline configuration"):
-                enforce_offline_isolation()
+            with patch.dict(sys.modules, {
+                "ultralytics": ultralytics,
+                "ultralytics.utils": utils,
+                "ultralytics.utils.checks": checks,
+                "ultralytics.utils.events": events_module,
+            }):
+                with pytest.raises(RuntimeError, match="Failed to establish the isolated Ultralytics offline configuration"):
+                    enforce_offline_isolation()
 
 
 def test_inference_executes_offline_without_network_io(monkeypatch):

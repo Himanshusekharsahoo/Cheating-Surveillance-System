@@ -88,7 +88,9 @@ def test_face_loss_in_process_head_pose_clears_history():
 
     # Call with detector returning no faces
     empty_det = MagicMock(return_value=[])
-    process_head_pose(_make_dummy_frame(), calibrated_angles=(0, 0, 0), detector=empty_det)
+    process_head_pose(
+        _make_dummy_frame(), calibrated_angles=(0, 0, 0), detector=empty_det, predictor=MagicMock()
+    )
 
     assert get_head_pose_history_counts() == (0, 0, 0)
 

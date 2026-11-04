@@ -580,7 +580,9 @@ class TestTrackerStateIsolation:
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
         detector_mock = MagicMock(return_value=[])
 
-        frame_out, direction = eye_movement.process_eye_movement(frame, detector=detector_mock)
+        frame_out, direction = eye_movement.process_eye_movement(
+            frame, detector=detector_mock, predictor=MagicMock()
+        )
         assert direction == "No Face Detected"
         assert eye_movement.get_last_gaze_tracking_result() is None
 

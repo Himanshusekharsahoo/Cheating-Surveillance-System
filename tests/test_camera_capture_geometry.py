@@ -41,6 +41,19 @@ from time_source import MockTimeSource
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture
+def model_independent_validation(monkeypatch, tmp_path):
+    predictor = tmp_path / "fake.dat"
+    yolo = tmp_path / "fake.pt"
+    predictor.write_bytes(b"dummy")
+    yolo.write_bytes(b"dummy")
+    monkeypatch.setattr(config, "SHAPE_PREDICTOR_PATH", predictor)
+    monkeypatch.setattr(config, "YOLO_MODEL_PATH", yolo)
+    monkeypatch.setattr(config, "LOG_DIR", tmp_path / "log")
+    monkeypatch.setattr(config, "enforce_offline_isolation", lambda: None)
+    yield
+
+
 def _fit_calibrator_with_geometry(width=640, height=480, path=None):
     calibrator = ScreenGazeCalibrator()
     calibrator.min_targets = 4
@@ -196,7 +209,7 @@ def test_missing_or_unavailable_effective_geometry_prevents_profile_activation()
     assert h2 is None
 
 
-def test_camera_relative_monitoring_remains_available_when_screen_calibration_rejected(monkeypatch, tmp_path):
+def test_camera_relative_monitoring_remains_available_when_screen_calibration_rejected(monkeypatch, tmp_path, model_independent_validation):
     """
     Test 9: Camera-relative head and fused-gaze monitoring continues to function
     even when screen calibration is rejected due to capture geometry mismatch.
@@ -247,7 +260,7 @@ def test_camera_relative_monitoring_remains_available_when_screen_calibration_re
     assert mock_face.screen_gaze is None
 
 
-def test_startup_and_cleanup_behavior_preserved(monkeypatch, tmp_path):
+def test_startup_and_cleanup_behavior_preserved(monkeypatch, tmp_path, model_independent_validation):
     """Test 10: Video capture release and cleanup behavior is preserved on EOF and error."""
     mock_cap = MagicMock()
     mock_cap.isOpened.return_value = True

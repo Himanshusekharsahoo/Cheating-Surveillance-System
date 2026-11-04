@@ -219,11 +219,14 @@ def test_both_yolo_and_dlib_verification_paths_fail_closed(tmp_path):
 # ---------------------------------------------------------------------------
 # Test 9: Temporary Test Models Through Dependency Injection
 # ---------------------------------------------------------------------------
-def test_temporary_model_registry_context_manager(tmp_path):
+def test_temporary_model_registry_context_manager(tmp_path, monkeypatch):
     """Verify that temporary_model_registry scopes test models and restores production state."""
     test_content = b"INJECTED_TEST_MODEL_DATA"
     test_file = _make_dummy_model(tmp_path, "injected.pt", test_content)
     test_hash = hashlib.sha256(test_content).hexdigest()
+    production_model = tmp_path / config.YOLO_MODEL_FILENAME
+    production_model.write_bytes(b"production test model")
+    monkeypatch.setattr(config, "YOLO_MODEL_PATH", production_model)
 
     temp_reg = {
         "injected.pt": {
@@ -237,9 +240,9 @@ def test_temporary_model_registry_context_manager(tmp_path):
     with temporary_model_registry(temp_reg):
         verified = verify_model_asset(test_file)
         assert verified == test_file
-        # Production model should not be in temp_reg
+        # Existing production path must not become unregistered during the temporary scope.
         with pytest.raises(ModelUnregisteredError):
-            verify_model_asset(config.YOLO_MODEL_PATH)
+            verify_model_asset(production_model)
 
     # Outside context manager: production registry is restored
     with pytest.raises(ModelUnregisteredError):

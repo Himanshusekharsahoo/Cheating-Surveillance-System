@@ -93,7 +93,8 @@ def test_headless_mode_does_not_open_gui_windows(tmp_path):
     with patch("cv2.imshow") as mock_imshow, \
          patch("cv2.destroyAllWindows") as mock_destroy, \
          patch("config.SHAPE_PREDICTOR_PATH", tmp_path / "fake.dat"), \
-         patch("config.YOLO_MODEL_PATH", tmp_path / "fake.pt"):
+         patch("config.YOLO_MODEL_PATH", tmp_path / "fake.pt"), \
+         patch("config.enforce_offline_isolation"):
         (tmp_path / "fake.dat").write_text("dummy")
         (tmp_path / "fake.pt").write_text("dummy")
 
@@ -111,7 +112,8 @@ def test_video_eof_clean_exit(tmp_path):
     mock_cap.read.return_value = (False, None)
 
     with patch("config.SHAPE_PREDICTOR_PATH", tmp_path / "fake.dat"), \
-         patch("config.YOLO_MODEL_PATH", tmp_path / "fake.pt"):
+         patch("config.YOLO_MODEL_PATH", tmp_path / "fake.pt"), \
+         patch("config.enforce_offline_isolation"):
         (tmp_path / "fake.dat").write_text("dummy")
         (tmp_path / "fake.pt").write_text("dummy")
 

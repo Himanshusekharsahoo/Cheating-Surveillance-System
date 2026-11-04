@@ -143,7 +143,7 @@ def test_encryption_enabled_screenshots_and_events(tmp_path: Path):
     assert records[0]["violation_type"] == "multiple_faces"
     assert records[0]["duration_sec"] == "3.50"
     assert records[0]["confidence"] == "0.9500"
-    assert records[0]["screenshot_path"] == ref
+    assert Path(records[0]["screenshot_path"]) == Path(ref)
 
 
 def test_encrypted_csv_chunk_rotation_and_ordering(tmp_path: Path):
@@ -281,20 +281,28 @@ def test_concurrent_encrypted_event_writes(tmp_path: Path):
     assert len(types) == total_threads * events_per_thread
 
 
-def test_missing_keystore_fails_closed(tmp_path: Path):
+def test_missing_keystore_fails_closed(tmp_path: Path, monkeypatch):
     """Verify that if encryption is enabled but keystore is missing, initialization fails closed."""
     log_dir = tmp_path / "log"
     missing_keystore = tmp_path / "nonexistent" / "keystore.enc"
+    predictor = tmp_path / "fake.dat"
+    yolo = tmp_path / "fake.pt"
+    predictor.write_bytes(b"dummy")
+    yolo.write_bytes(b"dummy")
+    monkeypatch.setattr(config, "SHAPE_PREDICTOR_PATH", predictor)
+    monkeypatch.setattr(config, "YOLO_MODEL_PATH", yolo)
+    monkeypatch.setattr(config, "LOG_DIR", log_dir)
 
-    with mock.patch("config.ENCRYPTION_ENABLED", True):
-        with mock.patch("config.KEYSTORE_PATH", missing_keystore):
-            # 1. EventLogger fails closed with SecurityConfigurationError
-            with pytest.raises(SecurityConfigurationError, match="keystore file does not exist"):
-                EventLogger(log_dir=log_dir, encryption_enabled=True)
+    with mock.patch("config.enforce_offline_isolation"):
+        with mock.patch("config.ENCRYPTION_ENABLED", True):
+            with mock.patch("config.KEYSTORE_PATH", missing_keystore):
+                # 1. EventLogger fails closed with SecurityConfigurationError
+                with pytest.raises(SecurityConfigurationError, match="keystore file does not exist"):
+                    EventLogger(log_dir=log_dir, encryption_enabled=True)
 
-            # 2. validate_config fails closed
-            with pytest.raises(SecurityConfigurationError, match="keystore file does not exist"):
-                config.validate_config()
+                # 2. validate_config fails closed
+                with pytest.raises(SecurityConfigurationError, match="keystore file does not exist"):
+                    config.validate_config()
 
 
 def test_corrupted_keystore_fails_closed(tmp_path: Path):

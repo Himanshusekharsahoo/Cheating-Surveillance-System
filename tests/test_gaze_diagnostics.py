@@ -417,7 +417,8 @@ def test_run_surveillance_integrates_gaze_diagnostics(tmp_path: Path):
 
     with patch("config.LOG_DIR", tmp_path), \
          patch("config.SHAPE_PREDICTOR_PATH", tmp_path / "fake.dat"), \
-         patch("config.YOLO_MODEL_PATH", tmp_path / "fake.pt"):
+         patch("config.YOLO_MODEL_PATH", tmp_path / "fake.pt"), \
+         patch("config.enforce_offline_isolation"):
         (tmp_path / "fake.dat").write_text("dummy")
         (tmp_path / "fake.pt").write_text("dummy")
 

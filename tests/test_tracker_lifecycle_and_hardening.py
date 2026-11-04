@@ -194,7 +194,8 @@ def test_surveillance_session_lifecycle_resets_tracker_between_sessions():
         gaze_diagnostics=_empty_gaze_diagnostics(),
     )
 
-    with patch("main.process_frame_face", return_value=(empty_res, fake_frame)):
+    with patch("config.validate_config"), \
+         patch("main.process_frame_face", return_value=(empty_res, fake_frame)):
         # Run session 1 with cap passed directly
         run_surveillance(cap=mock_cap, display=False, max_frames=2)
         # Tracker must be reset after session 1 exits

@@ -1,10 +1,12 @@
 <div align="center">
 
-# Cheating Surveillance System
+# ProctorVision
 
-### Signals, not verdicts.
+### Intelligent Examination Monitoring System
 
-A local computer-vision prototype for examining **head pose, eye gaze, screen-relative attention, face presence, and mobile-phone detections** from a webcam or recorded video.
+#### Signals, not verdicts.
+
+A local computer-vision research and engineering prototype for examining **head pose, eye gaze, screen-relative attention, face presence, and mobile-phone detections** from a webcam or recorded video.
 
 The application combines independent visual signals, keeps uncertainty visible, and records sustained events for human review. It is a research and development prototype—not an automated misconduct decision system.
 
@@ -16,7 +18,7 @@ The application combines independent visual signals, keeps uncertainty visible, 
 
 **Local frame processing** · **Head + eye signals** · **Optional display calibration** · **Reviewable event evidence**
 
-[Overview](#overview) · [Capabilities](#capabilities) · [Architecture](#architecture) · [Tech stack](#technology-stack) · [Setup](#setup) · [Run](#run) · [Evidence and privacy](#evidence-and-privacy) · [Testing](#testing) · [Limitations](#limitations-and-responsible-use)
+[Overview](#overview) · [Key capabilities](#key-capabilities) · [Architecture and technology](#architecture) · [Installation](#setup) · [Models and configuration](#model-setup-and-integrity-verification) · [Running](#run) · [Testing and CI](#testing) · [Privacy and security](#evidence-and-privacy) · [Limitations](#limitations-and-responsible-use)
 
 </div>
 
@@ -24,7 +26,7 @@ The application combines independent visual signals, keeps uncertainty visible, 
 
 ## Overview
 
-Cheating Surveillance System analyzes a webcam stream or a user-provided video on the local machine. A dlib face detector and 68-point facial landmark predictor feed separate head-pose and eye/pupil analysis paths. Their structured outputs are fused into a **camera-relative attention estimate**; an optional five-point workflow maps that estimate into **screen-relative gaze** for a compatible display setup.
+ProctorVision analyzes a webcam stream or a user-provided video on the local machine. A dlib face detector and 68-point facial landmark predictor feed separate head-pose and eye/pupil analysis paths. Their structured outputs are fused into a **camera-relative attention estimate**; an optional five-point workflow maps that estimate into **screen-relative gaze** for a compatible display setup.
 
 A separate Ultralytics YOLO path checks for mobile phones on a configurable frame cadence. The runtime evaluates sustained states, writes structured event and gaze-diagnostic logs, and captures a frame when an incident is confirmed.
 
@@ -33,7 +35,7 @@ The project does not upload a video stream to a cloud proctoring service. Its of
 > [!IMPORTANT]
 > A detected state is an algorithmic signal affected by camera placement, lighting, occlusion, calibration, and individual differences. It is not proof of cheating. Review events in context and keep consequential decisions with a qualified human reviewer.
 
-## Capabilities
+## Key capabilities
 
 | Signal | What the implementation does |
 |---|---|
@@ -111,12 +113,17 @@ The dependency manifest pins the principal packages below. The repository does n
 | Model runtime | `torch` / `torchvision` | `2.2.2` / `0.17.2` |
 | Phone detector | `ultralytics` | `8.3.82` |
 | Authenticated encryption | `cryptography` | `>=42.0.0` |
+| Cross-process locks | `filelock` | `3.17.0` |
 | Tests | `pytest` | Not listed as a requirement |
 
 > [!NOTE]
 > The comments in `requirements.txt` describe a local Windows x64 / Python 3.13.5 environment with newer package versions than several exact pins in the same file (including NumPy, dlib, PyTorch, and Ultralytics). A clean install from the pins is not demonstrated by that note. Resolve and validate a compatible dependency set for your interpreter before relying on a fresh installation. The current codebase does not establish support for macOS or Linux; evidence key wrapping uses Windows DPAPI.
 
+GitHub Actions uses Windows and Python 3.13 for both CI jobs. Its integration job installs `dlib-bin==20.0.1.post1`, which provides the `dlib` module used by the code; `requirements.txt` separately pins `dlib==19.24.6`. The workflow's package set is not a general-purpose replacement for the full requirements manifest.
+
 ## Setup
+
+### Installation and prerequisites
 
 Run these commands from the repository root in PowerShell:
 
@@ -163,6 +170,8 @@ Before deserializing or invoking either model, `model_integrity.py` validates pr
 
 ## Run
 
+### Running the application
+
 ```powershell
 # Default webcam (configured index is 0)
 python main.py
@@ -207,7 +216,41 @@ python main.py --retention-purge --no-dry-run
 
 The last command deletes eligible files under the configured log directory. Review the dry-run and preserve any evidence required by your organization before running it. Retention defaults to 30 days and automatic retention is disabled.
 
+## Testing
+
+Run the default suite from the repository root:
+
+```powershell
+# requirements.txt does not install pytest
+python -m pip install pytest
+python -m pytest
+```
+
+`pytest.ini` configures the default run to exclude tests marked `hardware` and `demo_video`. The suite includes unit tests, mocked integration paths, model-integrity checks, screen-calibration workflows, encryption/storage/export/retention tests, and real-model integration tests. Real-model cases require the two model assets; historical-image cases skip when their fixtures are absent. Demo-video tests require user-provided files under `Demo_vid/`. This checkout has only the `Demo_vid/.gitkeep` placeholder and no historical screenshots in `log/`, so those asset-dependent cases may be deselected or skipped. Hardware tests require a physical webcam and are not part of the default run.
+
+### GitHub Actions CI jobs
+
+Both jobs run on `windows-latest` with Python 3.13:
+
+| Job | Dependencies installed | Test selection |
+|---|---|---|
+| **Model-Independent Unit Tests** | `numpy`, `opencv-python`, `pytest`, `cryptography`, `filelock` | `python -m pytest -m "unit and not integration"` |
+| **Runtime Integration Tests** | The unit dependencies plus `dlib-bin==20.0.1.post1`, `torch==2.14.0`, `torchvision==0.29.0`, and `ultralytics==8.4.182` | `python -m pytest -m integration` |
+
+The repository does not contain the facial-landmark predictor, YOLO checkpoint, demo videos, or historical image fixtures. Tests that require those assets report explicit skips when the assets are absent. The integration job does not download model weights; a passing job therefore does not establish hosted real-model inference.
+
+To select tests by marker locally:
+
+```powershell
+python -m pytest -m "unit and not integration"
+python -m pytest -m integration
+```
+
+The default `python -m pytest` run follows `pytest.ini` and excludes tests marked `hardware` and `demo_video`. Tests marked `hardware` require an attached webcam; demo-video tests require user-provided media in `Demo_vid/`. Neither hardware validation nor physical webcam accuracy has been claimed. Automated tests do not establish real-world gaze accuracy.
+
 ## Evidence and privacy
+
+### Privacy and security
 
 By default, output is written under `log/` (changeable with `SURVEILLANCE_LOG_DIR`):
 
@@ -255,27 +298,6 @@ python evidence_migration.py --backup-dir .\evidence-backup --create-backup-only
 
 Event CSV cells are sanitized against spreadsheet formula injection, and evidence paths are checked before writes. The retention utility can inventory files and, only with explicit purge execution, delete expired unprotected items. These controls do not replace access control, backups, organizational retention policy, or human review.
 
-## Testing
-
-Run the default suite from the repository root:
-
-```powershell
-# requirements.txt does not install pytest
-python -m pip install pytest
-python -m pytest
-```
-
-`pytest.ini` configures the default run to exclude tests marked `hardware` and `demo_video`. The suite includes unit tests, mocked integration paths, model-integrity checks, screen-calibration workflows, encryption/storage/export/retention tests, and real-model integration tests. Real-model cases require the two model assets; historical-image cases skip when their fixtures are absent. Demo-video tests require user-provided files under `Demo_vid/`. This checkout has only the `Demo_vid/.gitkeep` placeholder and no historical screenshots in `log/`, so those asset-dependent cases may be deselected or skipped. Hardware tests require a physical webcam and are not part of the default run.
-
-To select tests by marker, for example:
-
-```powershell
-python -m pytest -m unit
-python -m pytest -m integration
-```
-
-No test results or physical webcam accuracy claims are published here; automated tests do not establish real-world gaze accuracy.
-
 ## Limitations and responsible use
 
 - Webcam-based pupil and head-pose estimates are sensitive to lighting, camera angle, face visibility, glasses reflections, eye geometry, and movement.
@@ -288,8 +310,32 @@ No test results or physical webcam accuracy claims are published here; automated
 
 Use the system only with appropriate notice, consent, access controls, retention rules, and human review. Do not treat an alert as definitive proof or use it as the sole basis for a consequential decision.
 
-## License
+## Project structure
+
+```text
+.
+├── main.py                 # Command-line entry point and surveillance lifecycle
+├── config.py               # Environment-backed settings and startup validation
+├── vision_pipeline.py      # Per-frame face and gaze pipeline
+├── head_pose.py            # Head-pose estimation
+├── eye_movement.py         # Pupil and eye-gaze analysis
+├── gaze_fusion.py          # Head/eye fusion
+├── screen_gaze.py          # Optional screen calibration and mapping
+├── mobile_detection.py     # YOLO phone detection
+├── model_integrity.py      # Model asset verification
+├── network_isolation.py    # Ultralytics offline controls
+├── crypto_core.py          # Encryption primitives
+├── keystore.py             # Key management
+├── encrypted_storage.py    # Encrypted evidence storage
+├── evidence_*.py           # Export, retention, and migration utilities
+├── tests/                  # Unit, integration, and hardware tests
+├── model/                  # Placeholder only; model binaries are excluded
+├── Demo_vid/               # Placeholder only; demo videos are excluded
+└── .github/workflows/ci.yml
+```
+
+## License and acknowledgements
 
 This project is licensed under the Apache License, Version 2.0. See the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) for the license terms.
 
-Third-party packages and model assets may have separate terms. Verify those terms and your right to obtain and use each asset independently.
+The project uses OpenCV, NumPy, dlib, PyTorch, torchvision, Ultralytics, cryptography, and filelock; see `requirements.txt` for the package manifest. Thanks to the maintainers of these open-source projects. Third-party packages and model assets have separate terms. Verify those terms and your right to obtain and use each asset independently.
